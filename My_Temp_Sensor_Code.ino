@@ -1,5 +1,3 @@
-
-// Robo India Tutorial 
 // Simple code upload the tempeature and humidity data using thingspeak.com
 // Hardware: NodeMCU,DHT11
 
