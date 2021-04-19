@@ -1,0 +1,107 @@
+#include <DHT.h>  // Including library for dht
+
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>   // Include the Wi-Fi-Multi library
+
+ESP8266WiFiMulti wifiMulti;     // Create an instance of the ESP8266WiFiMulti class, called 'wifiMulti'
+ 
+String apiKey = "NKFATTUMSYSEZS5H";     //  Enter your Write API key from ThingSpeak
+
+const char *ssid =  "VM2279333";    // replace with your wifi ssid and wpa2 key
+const char *pass =  "*********";
+const char* server = "api.thingspeak.com";
+const int voltageSensor = A0;
+
+float vOUT = 0.0;
+float v = 0.0;
+float R1 = 30000.0;
+float R2 = 7500.0;
+int value = 0;
+
+#define DHTPIN D6          //pin where the dht11 is connected
+ 
+DHT dht(DHTPIN, DHT11);
+
+WiFiClient client;
+ 
+void setup() 
+{
+       Serial.begin(115200);
+       delay(10);
+       dht.begin();
+ 
+  wifiMulti.addAP("VM2279333", "*********");   // add Wi-Fi networks you want to connect to
+  wifiMulti.addAP("VM5062639", "*********");
+  wifiMulti.addAP("VM2279333 (2)", "*********");
+  wifiMulti.addAP("Hamed", "*********");
+
+
+  Serial.println("Connecting ...");
+  int i = 0;
+  while (wifiMulti.run() != WL_CONNECTED) { // Wait for the Wi-Fi to connect: scan for Wi-Fi networks, and connect to the strongest of the networks above
+    delay(1000);
+    Serial.print('.');
+  }
+  Serial.println('\n');
+  Serial.print("Connected to ");
+  Serial.println(WiFi.SSID());              // Tell us what network we're connected to
+  Serial.print("IP address:\t");
+  Serial.println(WiFi.localIP());           // Send the IP address of the ESP8266 to the computer
+
+ 
+}
+ 
+void loop() 
+{
+      float h = dht.readHumidity();
+      float t = dht.readTemperature();      
+      value = analogRead(voltageSensor);
+      vOUT = (value * 3.20) / 1024.0;
+      v = vOUT / (R2/(R1+R2));
+      
+              if (isnan(h) || isnan(t) || isnan(v)) 
+                 {
+                     Serial.println("Failed to read from DHT sensor!");
+                      return;
+                 }
+
+                         if (client.connect(server,80))   //   "184.106.153.149" or api.thingspeak.com
+                      {  
+                            
+                             String postStr = apiKey;
+                             postStr +="&field1=";
+                             postStr += String(t);
+                             postStr +="&field2=";
+                             postStr += String(h);
+                             postStr +="&field3=";
+                             postStr += String(v);
+                             postStr += "\r\n\r\n";
+ 
+                             client.print("POST /update HTTP/1.1\n");
+                             client.print("Host: api.thingspeak.com\n");
+                             client.print("Connection: close\n");
+                             client.print("X-THINGSPEAKAPIKEY: "+apiKey+"\n");
+                             client.print("Content-Type: application/x-www-form-urlencoded\n");
+                             client.print("Content-Length: ");
+                             client.print(postStr.length());
+                             client.print("\n\n");
+                             client.print(postStr);
+ 
+                             Serial.print("Temperature: ");
+                             Serial.print(t);
+                             Serial.print(" degrees Celcius, Humidity: ");
+                             Serial.print(h);
+                             Serial.println("%.");
+                             Serial.print(v);
+                             Serial.println("V");
+                        }
+          client.stop();
+ 
+          Serial.println("Waiting...");
+  //ESP.deepSleep(600e6); 
+  //ESP.deepSleep(300e6); 
+  ESP.deepSleep(6000e6); 
+
+  // thingspeak needs minimum 15 sec delay between updates, i've set it to 30 seconds
+  //delay(600000);
+}
