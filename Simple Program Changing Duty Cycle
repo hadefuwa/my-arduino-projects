@@ -1,0 +1,11 @@
+int outputPin = 11;
+
+void setup() 
+{
+  pinMode(outputPin,OUTPUT);
+}
+
+void loop() 
+{
+  analogWrite(outputPin,255); //change 255 to any value between 0-255
+}
